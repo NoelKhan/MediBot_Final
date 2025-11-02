@@ -1,0 +1,38 @@
+name: Manual Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: 'latest'
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: self-hosted
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/medibot-app \
+            medibot-app=ghcr.io/${{ github.repository }}:${{ github.event.inputs.image_tag }} \
+            -n medibot
+          
+          kubectl rollout status deployment/medibot-app -n medibot --timeout=10m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n medibot
+          kubectl get services -n medibot

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: medibot-config
+  namespace: medibot
+data:
+  # Application Configuration
+  LLM_MODEL: "mistral:7b-instruct"
+  LLM_TEMPERATURE: "0.3"
+  LLM_MAX_TOKENS: "1024"
+  LLM_BASE_URL: "http://ollama-service:11434"
+  DATABASE_URL: "sqlite:////app/data/medical_llama.db"
+  
+  # Feature Flags
+  ENABLE_TELEMETRY: "false"
+  LOG_LEVEL: "INFO"

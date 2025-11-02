@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medibot-app
+  namespace: medibot
+  labels:
+    app: medibot
+    component: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: medibot
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: medibot
+        component: backend
+    spec:
+      containers:
+      - name: medibot-app
+        image: ghcr.io/yathanshnagar/medibot:latest  # Update with your registry
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: medibot-config
+              key: DATABASE_URL
+        - name: LLM_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: medibot-config
+              key: LLM_BASE_URL
+        - name: LLM_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: medibot-config
+              key: LLM_MODEL
+        - name: LLM_TEMPERATURE
+          valueFrom:
+            configMapKeyRef:
+              name: medibot-config
+              key: LLM_TEMPERATURE
+        - name: LLM_MAX_TOKENS
+          valueFrom:
+            configMapKeyRef:
+              name: medibot-config
+              key: LLM_MAX_TOKENS
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: medibot-data-pvc
+      - name: logs
+        emptyDir: {}
+      # Optional: Use image pull secrets for private registries
+      # imagePullSecrets:
+      # - name: ghcr-secret

@@ -53,7 +53,20 @@ A comprehensive AI-powered medical chatbot system that provides conversational h
 - Session management with tokens
 - Per-user data isolation
 
-## 🛠️ Technology Stack
+## � Container & Kubernetes Ready
+
+MediBot is fully containerized and production-ready with:
+- **Docker**: Multi-stage Dockerfile for optimized images
+- **Docker Compose**: Local development environment with all services
+- **Kubernetes**: Complete K8s manifests for production deployment
+- **Helm Charts**: Package manager for easy deployment and upgrades
+- **CI/CD**: GitHub Actions workflows for automated builds and deployments
+- **Auto-scaling**: Horizontal Pod Autoscaler for handling variable load
+- **Self-hosted Runners**: Support for building on your infrastructure
+
+See the [`infrastructure/`](./infrastructure/) directory for complete deployment documentation.
+
+## �🛠️ Technology Stack
 
 - **Backend**: FastAPI, Python 3.8+
 - **AI/LLM**: Mistral 7B Instruct via Ollama
@@ -493,6 +506,194 @@ Once the server is running, visit:
 - [ ] First consultation completed
 - [ ] Appointment booked
 - [ ] Notifications received
+
+## 🚀 Deployment & Production
+
+### Docker Deployment
+
+#### Local Development with Docker Compose
+```bash
+# Clone the repository
+git clone https://github.com/yathanshnagar/MediBot_Final.git
+cd MediBot_Final
+
+# Start all services
+docker-compose up --build
+
+# Access the application
+# App: http://localhost:8000
+# Ollama: http://localhost:11434
+```
+
+#### Build Docker Image
+```bash
+# Build the image
+docker build -t medibot:latest .
+
+# Run the container
+docker run -p 8000:8000 medibot:latest
+```
+
+### Kubernetes Deployment
+
+#### Prerequisites
+- Kubernetes cluster (v1.24+)
+- kubectl configured
+- Ingress controller installed
+
+#### Quick Deploy
+```bash
+# Deploy all resources
+./infrastructure/deploy.sh deploy
+
+# Check status
+./infrastructure/deploy.sh status
+
+# View logs
+./infrastructure/deploy.sh logs
+```
+
+#### Manual Deploy
+```bash
+# Apply all manifests
+kubectl apply -f infrastructure/kubernetes/
+
+# Verify deployment
+kubectl get all -n medibot
+
+# Port forward for local access
+kubectl port-forward -n medibot svc/medibot-service 8000:8000
+```
+
+#### Using Helm
+```bash
+# Install with Helm
+helm install medibot ./infrastructure/helm \
+  --namespace medibot \
+  --create-namespace
+
+# Upgrade
+helm upgrade medibot ./infrastructure/helm
+
+# Uninstall
+helm uninstall medibot --namespace medibot
+```
+
+### CI/CD with GitHub Actions
+
+The project includes three GitHub Actions workflows:
+
+1. **CI/CD Pipeline** (`ci-cd.yml`)
+   - Automated testing and linting
+   - Docker image build and push
+   - Security scanning with Trivy
+   - Kubernetes deployment
+   - Triggered on push to main/develop
+
+2. **Self-Hosted Runner Build** (`self-hosted-build.yml`)
+   - Build on your infrastructure
+   - Direct kubectl access
+   - Manual trigger for staging/production
+
+3. **Manual Deploy** (`manual-deploy.yml`)
+   - Deploy specific image tags
+   - Environment selection (staging/production)
+
+#### Setup GitHub Actions
+
+1. **Add repository secrets:**
+   ```
+   Settings → Secrets and variables → Actions
+   ```
+   - `KUBE_CONFIG`: Base64 encoded kubeconfig
+   - `REGISTRY_USERNAME`: Container registry username
+   - `REGISTRY_PASSWORD`: Container registry password
+
+2. **Enable workflows:**
+   - Push code to trigger automatic deployment
+   - Use workflow dispatch for manual deployments
+
+3. **Self-hosted runner (optional):**
+   See [`infrastructure/SELF_HOSTED_RUNNER.md`](./infrastructure/SELF_HOSTED_RUNNER.md) for setup instructions.
+
+### Production Checklist
+
+Before deploying to production:
+
+- [ ] Update secrets in `infrastructure/kubernetes/secret.yaml`
+- [ ] Configure domain in `infrastructure/kubernetes/ingress.yaml`
+- [ ] Set resource limits appropriately
+- [ ] Enable TLS/SSL certificates
+- [ ] Configure backup strategy
+- [ ] Set up monitoring and alerting
+- [ ] Test disaster recovery procedures
+- [ ] Review security settings
+- [ ] Configure auto-scaling limits
+- [ ] Set up log aggregation
+
+### Infrastructure Documentation
+
+Comprehensive documentation is available in the `infrastructure/` directory:
+
+- **[README.md](./infrastructure/README.md)** - Complete deployment guide
+- **[SELF_HOSTED_RUNNER.md](./infrastructure/SELF_HOSTED_RUNNER.md)** - GitHub Actions runner setup
+- **[KUBERNETES_QUICKREF.md](./infrastructure/KUBERNETES_QUICKREF.md)** - Quick command reference
+- **[DEPLOYMENT_CHECKLIST.md](./infrastructure/DEPLOYMENT_CHECKLIST.md)** - Step-by-step checklist
+
+### Monitoring & Maintenance
+
+#### Health Checks
+```bash
+# Check application health
+curl http://localhost:8000/health
+
+# In Kubernetes
+kubectl get pods -n medibot
+kubectl logs -n medibot -l app=medibot
+```
+
+#### Scaling
+```bash
+# Manual scaling
+kubectl scale deployment/medibot-app --replicas=5 -n medibot
+
+# Auto-scaling is configured via HPA
+kubectl get hpa -n medibot
+```
+
+#### Updates
+```bash
+# Rolling update
+kubectl set image deployment/medibot-app \
+  medibot-app=ghcr.io/yathanshnagar/medibot:v1.1.0 \
+  -n medibot
+
+# Rollback if needed
+kubectl rollout undo deployment/medibot-app -n medibot
+```
+
+### Troubleshooting Deployment
+
+#### Docker Issues
+```bash
+# Check container logs
+docker logs <container-id>
+
+# Rebuild without cache
+docker-compose build --no-cache
+```
+
+#### Kubernetes Issues
+```bash
+# Check pod status
+kubectl describe pod -n medibot <pod-name>
+
+# Check events
+kubectl get events -n medibot --sort-by='.lastTimestamp'
+
+# Test connectivity
+kubectl exec -it -n medibot <pod-name> -- curl http://ollama-service:11434
+```
 
 ## 🚀 Future Enhancements
 

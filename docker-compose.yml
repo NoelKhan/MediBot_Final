@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # MediBot FastAPI Application
+  medibot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medibot-app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/medical_llama.db
+      - LLM_BASE_URL=http://ollama:11434
+      - LLM_MODEL=mistral:7b-instruct
+      - LLM_TEMPERATURE=0.3
+      - LLM_MAX_TOKENS=1024
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - medibot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Ollama LLM Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: medibot-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - medibot-network
+    # Pull the model on startup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        sleep 10
+        ollama pull mistral:7b-instruct
+        wait
+
+  # Optional: PostgreSQL (if you want to switch from SQLite)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: medibot-postgres
+  #   environment:
+  #     - POSTGRES_USER=medibot
+  #     - POSTGRES_PASSWORD=medibot_secure_password
+  #     - POSTGRES_DB=medibot_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - medibot-network
+
+  # Optional: Redis for caching
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: medibot-redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+  #   networks:
+  #     - medibot-network
+
+networks:
+  medibot-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+  # postgres-data:

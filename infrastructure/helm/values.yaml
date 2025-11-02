@@ -1,0 +1,121 @@
+# Default values for medibot
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  namespace: medibot
+
+# Application settings
+app:
+  name: medibot-app
+  replicaCount: 2
+  
+  image:
+    repository: ghcr.io/yathanshnagar/medibot
+    pullPolicy: Always
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8000
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Ollama LLM settings
+ollama:
+  enabled: true
+  name: ollama
+  
+  image:
+    repository: ollama/ollama
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 11434
+  
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+
+# Configuration
+config:
+  llm:
+    model: "mistral:7b-instruct"
+    temperature: "0.3"
+    maxTokens: "1024"
+    baseUrl: "http://ollama-service:11434"
+  
+  database:
+    url: "sqlite:////app/data/medical_llama.db"
+  
+  features:
+    telemetry: false
+    logLevel: "INFO"
+
+# Secrets (should be overridden in production)
+secrets:
+  databasePassword: "changeme_in_production"
+  apiSecretKey: "changeme_in_production"
+
+# Persistence
+persistence:
+  enabled: true
+  storageClass: ""
+  dataSize: 10Gi
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+  host: medibot.yourdomain.com
+  tls:
+    enabled: false
+    secretName: medibot-tls
+
+# Service Account
+serviceAccount:
+  create: true
+  name: medibot-sa
+
+# Pod Security
+podSecurityContext:
+  runAsNonRoot: false
+  fsGroup: 0
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+
+# Node selection
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: medibot
+description: A Helm chart for MediBot Medical Triage System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - medibot
+  - medical
+  - llm
+  - fastapi
+maintainers:
+  - name: MediBot Team
+    email: your-email@example.com
+dependencies: []

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: medibot
+  labels:
+    app: ollama
+    component: llm
+spec:
+  replicas: 1  # Ollama typically runs as single instance
+  selector:
+    matchLabels:
+      app: ollama
+      component: llm
+  template:
+    metadata:
+      labels:
+        app: ollama
+        component: llm
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        ports:
+        - containerPort: 11434
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /root/.ollama
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        # Pull model on startup
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                sleep 10
+                ollama pull mistral:7b-instruct
+      volumes:
+      - name: ollama-data
+        persistentVolumeClaim:
+          claimName: ollama-data-pvc
+      # Optional: Use node selector for GPU nodes
+      # nodeSelector:
+      #   gpu: "true"
+      # tolerations:
+      # - key: "nvidia.com/gpu"
+      #   operator: "Exists"
+      #   effect: "NoSchedule"
