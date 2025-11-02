@@ -1,0 +1,255 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                   MediBot Quick Reference Card                       ║
+║                   Keep This Handy! 📌                                ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🚀 START APPLICATION                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+
+Docker Compose (Recommended):
+  $ docker-compose up                    # Start everything
+  $ docker-compose up --build            # Rebuild and start
+  $ docker-compose down                  # Stop everything
+
+Local Python:
+  $ ollama serve                         # Start Ollama (separate terminal)
+  $ python main.py                       # Start app
+  $ uvicorn main:app --reload            # With auto-reload
+
+Access:
+  🌐 Application:  http://localhost:8000
+  📚 API Docs:     http://localhost:8000/docs
+  ❤️  Health:      http://localhost:8000/health
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🧪 TESTING                                                           │
+└─────────────────────────────────────────────────────────────────────┘
+
+Verify Setup:
+  $ ./test-local-setup.sh                # Full system check
+
+Quick Tests:
+  $ python quick_test.py                 # Fast API test
+  $ python test_api.py                   # Endpoint tests
+  $ python test_workflow.py              # Workflow tests
+
+Health Check:
+  $ curl http://localhost:8000/health
+  Expected: {"status":"healthy","service":"medical-llama"}
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🗄️ DATABASE                                                          │
+└─────────────────────────────────────────────────────────────────────┘
+
+Initialize/Seed:
+  $ python seed_data.py                  # Create sample data
+
+Reset Database:
+  $ rm medical_llama.db && python seed_data.py
+
+Query Database:
+  $ sqlite3 medical_llama.db
+  sqlite> SELECT * FROM users;
+  sqlite> SELECT * FROM consultations LIMIT 5;
+  sqlite> .quit
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🤖 OLLAMA (LLM)                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+Start Service:
+  $ ollama serve                         # Background process
+
+Pull Model (First Time):
+  $ ollama pull mistral:7b-instruct      # ~4GB download
+
+Check Status:
+  $ ollama list                          # List installed models
+  $ curl http://localhost:11434/api/version
+
+Test Model:
+  $ ollama run mistral:7b-instruct "Hello"
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🐳 DOCKER                                                            │
+└─────────────────────────────────────────────────────────────────────┘
+
+Build & Run:
+  $ docker build -t medibot .            # Build image
+  $ docker run -p 8000:8000 medibot      # Run container
+
+Docker Compose:
+  $ docker-compose up -d                 # Detached mode
+  $ docker-compose logs -f               # View logs
+  $ docker-compose ps                    # List services
+  $ docker-compose restart medibot-app   # Restart service
+
+Clean Up:
+  $ docker-compose down -v               # Remove volumes too
+  $ docker system prune -af              # Clean all Docker
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ ☸️ KUBERNETES                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+Deploy:
+  $ ./infrastructure/deploy.sh deploy    # Automated deployment
+  $ kubectl apply -f infrastructure/kubernetes/  # Manual
+
+Check Status:
+  $ kubectl get all -n medibot           # All resources
+  $ kubectl get pods -n medibot          # Pods only
+  $ kubectl get svc -n medibot           # Services
+
+View Logs:
+  $ kubectl logs -n medibot -l app=medibot -f
+
+Port Forward:
+  $ kubectl port-forward -n medibot svc/medibot-service 8000:8000
+
+Scale:
+  $ kubectl scale deployment/medibot-app --replicas=5 -n medibot
+
+Restart:
+  $ kubectl rollout restart deployment/medibot-app -n medibot
+
+Clean Up:
+  $ kubectl delete namespace medibot
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🔍 DEBUGGING                                                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+Check Ports:
+  $ lsof -i :8000                        # Find process on port 8000
+  $ lsof -i :11434                       # Find process on port 11434
+
+View Logs:
+  Docker:    docker-compose logs -f medibot-app
+  K8s:       kubectl logs -n medibot -l app=medibot -f
+  Local:     Check terminal output
+
+Kill Process:
+  $ pkill -f main.py                     # Kill Python app
+  $ pkill ollama                         # Kill Ollama
+
+Test Connectivity:
+  $ curl http://localhost:8000/health    # App health
+  $ curl http://localhost:11434/api/version  # Ollama version
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 📁 FILE LOCATIONS                                                    │
+└─────────────────────────────────────────────────────────────────────┘
+
+Application:        main.py, config.py, database.py, workflow.py
+Frontend:           *.html (auth, chat_ui, dashboard, medical_history)
+Docker:             Dockerfile, docker-compose.yml, .dockerignore
+Kubernetes:         infrastructure/kubernetes/*.yaml
+CI/CD:              .github/workflows/*.yml
+Documentation:      README.md, LOCAL_DEVELOPMENT.md, infrastructure/*.md
+Tests:              test_*.py, test-local-setup.sh
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🔧 CONFIGURATION                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Edit Settings:      config.py
+LLM Config:         LLM_MODEL, LLM_TEMPERATURE, LLM_BASE_URL
+Database:           DATABASE_URL
+Port:               main.py (default: 8000)
+
+Environment Variables (optional .env):
+  LLM_MODEL=mistral:7b-instruct
+  LLM_BASE_URL=http://localhost:11434
+  DATABASE_URL=sqlite:///./medical_llama.db
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 📊 MONITORING                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+Application Metrics:
+  $ curl http://localhost:8000/info      # Service info
+
+Docker Resources:
+  $ docker stats                         # Real-time stats
+  $ docker system df                     # Disk usage
+
+Kubernetes Resources:
+  $ kubectl top nodes                    # Node usage
+  $ kubectl top pods -n medibot          # Pod usage
+  $ kubectl get hpa -n medibot           # Auto-scaling status
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🚨 COMMON ISSUES & FIXES                                            │
+└─────────────────────────────────────────────────────────────────────┘
+
+Port in use:
+  $ lsof -i :8000 && kill -9 <PID>
+
+Ollama not responding:
+  $ pkill ollama && ollama serve
+  $ ollama pull mistral:7b-instruct
+
+Database locked:
+  $ pkill -f main.py
+  $ rm medical_llama.db && python seed_data.py
+
+Docker build fails:
+  $ docker system prune -af
+  $ docker build --no-cache -t medibot .
+
+Import errors:
+  $ pip install --upgrade -r requirements.txt
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🎯 QUICK WORKFLOWS                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+First Time Setup:
+  1. ollama pull mistral:7b-instruct
+  2. pip install -r requirements.txt
+  3. python seed_data.py
+  4. python main.py
+
+Daily Development:
+  1. ollama serve (if not running)
+  2. uvicorn main:app --reload
+  3. Open http://localhost:8000
+
+Before Committing:
+  1. ./test-local-setup.sh
+  2. docker-compose up (test)
+  3. git add . && git commit -m "message"
+
+Deploy to Production:
+  1. git push origin main (triggers CI/CD)
+  2. Or: ./infrastructure/deploy.sh deploy
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTATION                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Getting Started:        LOCAL_DEVELOPMENT.md
+Infrastructure:         infrastructure/GETTING_STARTED.md
+Kubernetes Commands:    infrastructure/KUBERNETES_QUICKREF.md
+Deployment Guide:       infrastructure/README.md
+Deployment Checklist:   infrastructure/DEPLOYMENT_CHECKLIST.md
+CI/CD Setup:            infrastructure/GITHUB_ACTIONS_SETUP.md
+Self-Hosted Runner:     infrastructure/SELF_HOSTED_RUNNER.md
+Complete Overview:      infrastructure/FILE_OVERVIEW.md
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🆘 GET HELP                                                          │
+└─────────────────────────────────────────────────────────────────────┘
+
+1. Run: ./test-local-setup.sh
+2. Check logs (see Debugging section above)
+3. Read: LOCAL_DEVELOPMENT.md
+4. Check troubleshooting in infrastructure/README.md
+5. Review API docs: http://localhost:8000/docs
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                    🎉 Happy Developing!                              ║
+║    Save this file as: QUICK_REFERENCE.txt                           ║
+╚══════════════════════════════════════════════════════════════════════╝
