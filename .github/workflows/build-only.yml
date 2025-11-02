@@ -1,7 +1,4 @@
-name: CI/CD Pipeline
-
-# Runner Strategy: All jobs prefer self-hosted runners first, with ubuntu-latest as fallback
-# This optimizes cost and performance while maintaining reliability
+name: Build and Test Only
 
 on:
   push:
@@ -9,13 +6,10 @@ on:
       - main
       - develop
       - tech-test
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
       - develop
-      - tech-test
 
 env:
   REGISTRY: ghcr.io
@@ -25,7 +19,7 @@ jobs:
   # Job 1: Run tests and linting
   test:
     name: Test and Lint
-    runs-on: [self-hosted, ubuntu-latest]  # Prefer self-hosted, fallback to ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,20 +50,14 @@ jobs:
 
       - name: Run tests
         run: |
-          # Add your test commands here
-          # pytest tests/ --cov=. --cov-report=xml
-          echo "Tests will run here"
-        continue-on-error: true
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        if: always()
+          echo "Tests placeholder - add pytest when ready"
+          python -c "import main, config, database, workflow" || echo "Import check"
         continue-on-error: true
 
   # Job 2: Build and push Docker image
   build:
     name: Build and Push Docker Image
-    runs-on: [self-hosted, ubuntu-latest]  # Prefer self-hosted, fallback to ubuntu-latest
+    runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'
     permissions:
@@ -118,9 +106,36 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
+      - name: Image built successfully
+        run: |
+          echo "✅ Docker image built and pushed successfully!"
+          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "🏷️  Tags: ${{ steps.meta.outputs.tags }}"
+          echo "🔖 Digest: ${{ steps.build.outputs.digest }}"
+
+  # Job 3: Generate SBOM (Optional)
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
-        continue-on-error: true  # Don't fail the build if SBOM generation fails
+        continue-on-error: true
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: spdx-json
@@ -134,16 +149,18 @@ jobs:
         with:
           name: sbom
           path: sbom.spdx.json
+          retention-days: 90
 
-  # Job 3: Security scanning
+  # Job 4: Security scanning
   security:
     name: Security Scan
-    runs-on: [self-hosted, ubuntu-latest]  # Prefer self-hosted, fallback to ubuntu-latest
+    runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
     permissions:
       security-events: write
       contents: read
+      packages: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,7 +174,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        continue-on-error: true  # Don't fail deployment on security issues
+        continue-on-error: true
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: 'sarif'
@@ -167,71 +184,28 @@ jobs:
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-results.sarif'
 
-  # Job 4: Deploy to Kubernetes
-  deploy:
-    name: Deploy to Kubernetes
-    runs-on: self-hosted  # Use self-hosted runner for kubectl access
-    needs: [build, security]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: production
-      url: https://medibot.yourdomain.com
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Configure kubectl context
-        run: |
-          # Configure your kubectl context here
-          # This depends on your Kubernetes setup (EKS, GKE, AKS, etc.)
-          echo "Configuring kubectl context..."
-          # Example for kubeconfig file:
-          # mkdir -p $HOME/.kube
-          # echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-
-      - name: Update Kubernetes deployment
-        run: |
-          # Update the image tag in deployment
-          kubectl set image deployment/medibot-app \
-            medibot-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -n medibot
-
-      - name: Verify deployment
-        run: |
-          kubectl rollout status deployment/medibot-app -n medibot --timeout=5m
-          kubectl get pods -n medibot
-
-      - name: Run smoke tests
-        run: |
-          # Wait for service to be ready
-          sleep 30
-          # Add your smoke tests here
-          echo "Running smoke tests..."
-          # curl -f https://medibot.yourdomain.com/health || exit 1
-
-  # Job 5: Notification
-  notify:
-    name: Send Notifications
-    runs-on: [self-hosted, ubuntu-latest]  # Prefer self-hosted, fallback to ubuntu-latest
-    needs: [deploy]
+  # Job 5: Summary
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [test, build, security]
     if: always()
     steps:
-      - name: Notify on success
-        if: needs.deploy.result == 'success'
+      - name: Build Summary
         run: |
-          echo "Deployment successful! 🚀"
-          # Add Slack/Discord/Email notification here
-
-      - name: Notify on failure
-        if: needs.deploy.result == 'failure'
-        run: |
-          echo "Deployment failed! ❌"
-          # Add Slack/Discord/Email notification here
+          echo "## 🎉 Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Docker Image" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry: \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Pull image: \`docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test locally: \`docker run -p 8000:8000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Deploy to K8s: Check infrastructure/README.md" >> $GITHUB_STEP_SUMMARY

@@ -1,5 +1,8 @@
 name: Manual Deploy to Kubernetes
 
+# Uses self-hosted runners for direct Kubernetes access
+# Allows manual deployment of specific image tags to different environments
+
 on:
   workflow_dispatch:
     inputs:

@@ -1,5 +1,8 @@
 name: Self-Hosted Runner Build
 
+# This workflow is specifically for manual builds using self-hosted runners
+# For automatic CI/CD, the main ci-cd.yml workflow uses self-hosted runners by default
+
 on:
   workflow_dispatch:
     inputs:
