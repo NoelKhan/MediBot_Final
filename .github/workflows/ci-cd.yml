@@ -5,12 +5,14 @@ on:
     branches:
       - main
       - develop
+      - tech-test
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
       - develop
+      - tech-test
 
 env:
   REGISTRY: ghcr.io
